@@ -1,0 +1,99 @@
+---
+
+- hosts: localhost
+  connection: local
+  
+  vars_files:
+    - config.yml
+
+  tasks:
+
+    - pip:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - linode-python
+        - pycurl
+      become: yes
+
+    - linode:
+        api_key: "{{ api_token }}"
+        datacenter: "{{ datacenter }}"
+        distribution: 140
+        name: pptp-vpn
+        plan: 1
+        ssh_pub_key: "{{ ssh_pubkey }}"
+        state: present
+        swap: 256
+        wait: yes
+        wait_timeout: 600
+      register: launch
+
+    - add_host:
+        name: "{{ launch.instance.ipv4 }}"
+        groups: launch
+
+    - wait_for:
+        host: "{{ launch.instance.ipv4 }}"
+        port: 22
+        delay: 10
+        timeout: 300
+
+
+- hosts: launch
+  remote_user: root
+
+  vars_files:
+    - config.yml
+
+  tasks:
+
+    - apt:
+        update_cache: yes
+        upgrade: safe
+
+    - hostname:
+        name: uk-vpn
+
+    - copy:
+        src: files/hosts
+        dest: /etc/hosts
+
+    - copy:
+        src: files/sshd_config
+        dest: /etc/ssh/sshd_config
+
+    - service:
+        name: ssh
+        state: restarted
+
+    - apt:
+        pkg: pptpd
+        state: installed
+
+    - copy:
+        src: files/pptpd.conf
+        dest: /etc/pptpd.conf
+
+    - copy:
+        src: files/pptpd-options
+        dest: /etc/ppp/pptpd-options
+
+    - template:
+        src: templates/chap-secrets.j2
+        dest: /etc/ppp/chap-secrets
+
+    - service:
+        name: pptpd
+        enabled: yes
+        state: restarted
+
+    - copy:
+        src: files/sysctl.conf
+        dest: /etc/sysctl.conf
+
+    - command: sysctl -p /etc/sysctl.conf
+    - command: iptables -t nat -F POSTROUTING
+    - command: iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+# vim: set ft=ansible ts=2 sts=2 sw=2 et:

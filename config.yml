@@ -1,0 +1,26 @@
+---
+
+# Linode API token
+api_token: allyourbase
+
+# Linode Datacenter
+#   Atlanta, GA: 4
+#   Dallas, TX: 2
+#   Frankfurt, DE: 10
+#   Fremont, CA: 3
+#   London, UK: 7
+#   Newark, NJ: 6
+#   Singapore, SG: 9
+#   Tokyo, JP: 8
+#
+datacenter: 7
+
+# Your SSH pubkey
+ssh_pubkey: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+# List of PPTP users
+pptp_users:
+  - name: me
+    pass: neversecure
+
+# vim: set ft=ansible ts=2 sts=2 sw=2 et:
